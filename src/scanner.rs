@@ -93,7 +93,7 @@ impl Scanner<'_> {
             tokens: vec![],
             start: 0,
             current: 0,
-            line: 0, 
+            line: 0,
             lox,
         }
     }
@@ -163,14 +163,15 @@ impl Scanner<'_> {
                 self.add_token(token_type, None)
             }
             '/' => {
-              if self.match_next('/') {
-                while self.peek() != '\n' && !self.is_at_end() {
-                  self.advance();
+                if self.match_next('/') {
+                    while self.peek() != '\n' && !self.is_at_end() {
+                        self.advance();
+                    }
+                } else {
+                    self.add_token(TokenType::Slash, None)
                 }
-              } else {
-                self.add_token(TokenType::Slash, None)
-              }
             }
+            '"' => self.string(),
             ' ' | '\r' | '\t' => {}
             '\n' => self.line += 1,
             _ => self.lox.error(self.line, "Unexpected character."),
@@ -204,16 +205,39 @@ impl Scanner<'_> {
         }
     }
 
-    fn peek(&self)  -> char{
-      if self.is_at_end() {'\0'} else {
-        let c = self.source.chars().nth(self.current);
-        match c {
-            Some(c) => {
-              c
+    fn peek(&self) -> char {
+        if self.is_at_end() {
+            '\0'
+        } else {
+            let c = self.source.chars().nth(self.current);
+            match c {
+                Some(c) => c,
+                None => panic!("Scanner failed at line {}", self.line),
             }
-            None => panic!("Scanner failed at line {}", self.line),
         }
-      }
+    }
+
+    fn string(&mut self) {
+        while self.peek() != '"' && !self.is_at_end() {
+            if self.peek() == '\n' {
+                self.line += 1
+            };
+            self.advance();
+        }
+
+        if self.is_at_end() {
+            self.lox.error(self.line, "Unterminated string.");
+            return;
+        }
+
+        self.advance();
+        let value: String = self
+            .source
+            .chars()
+            .skip(self.start + 1)
+            .take(self.current - 1 - (self.start + 1))
+            .collect();
+        self.add_token(TokenType::String, Some(Literal::Str(value)));
     }
 
     fn add_token(&mut self, token_type: TokenType, literal: Option<Literal>) {
