@@ -1,11 +1,11 @@
 use core::fmt;
 use std::string::String;
 
+use phf::phf_map;
+
 use crate::Lox;
 
-const RADIX: u32 = 10;
-
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
 enum TokenType {
     // Single-character tokens.
     LeftParen,
@@ -78,6 +78,25 @@ impl fmt::Display for Token {
         )
     }
 }
+
+static KEYWORDS: phf::Map<&'static str, TokenType> = phf_map! {
+    "and" =>    TokenType::And,
+    "class" =>  TokenType::Class,
+    "else" =>   TokenType::Else,
+    "false" =>  TokenType::False,
+    "for" =>    TokenType::For,
+    "fun" =>    TokenType::Fun,
+    "if" =>     TokenType::If,
+    "nil" =>    TokenType::Nil,
+    "or" =>     TokenType::Or,
+    "print" =>  TokenType::Print,
+    "return" => TokenType::Return,
+    "super" =>  TokenType::Super,
+    "this" =>   TokenType::This,
+    "true" =>   TokenType::True,
+    "var" =>    TokenType::Var,
+    "while" =>  TokenType::While,
+};
 
 pub struct Scanner<'a> {
     source: &'a String,
@@ -176,7 +195,8 @@ impl Scanner<'_> {
             '"' => self.string(),
             ' ' | '\r' | '\t' => {}
             '\n' => self.line += 1,
-            _ if c.is_digit(RADIX) => self.number(),
+            _ if c.is_ascii_digit() => self.number(),
+            _ if c.is_ascii_alphabetic() => self.identifier(),
             _ => self.lox.error(self.line, "Unexpected character."),
         }
     }
@@ -248,13 +268,13 @@ impl Scanner<'_> {
     }
 
     fn number(&mut self) {
-        while self.peek().is_digit(RADIX) {
+        while self.peek().is_ascii_digit() {
             self.advance();
         }
-        if self.peek() == '.' && self.peek_next().is_digit(RADIX) {
+        if self.peek() == '.' && self.peek_next().is_ascii_digit() {
             self.advance();
 
-            while self.peek().is_digit(RADIX) {
+            while self.peek().is_ascii_digit() {
                 self.advance();
             }
         }
@@ -268,6 +288,27 @@ impl Scanner<'_> {
             TokenType::Number,
             Some(Literal::F64(value.as_str().parse::<f64>().unwrap())),
         )
+    }
+
+    fn identifier(&mut self) {
+        while self.peek().is_ascii_alphanumeric() {
+            self.advance();
+        }
+
+        let text: String = self
+            .source
+            .chars()
+            .skip(self.start)
+            .take(self.current - self.start)
+            .collect();
+
+        let token_type = if KEYWORDS.contains_key(text.as_str()) {
+            *KEYWORDS.get(text.as_str()).unwrap()
+        } else {
+            TokenType::Identifier
+        };
+
+        self.add_token(token_type, None)
     }
 
     fn add_token(&mut self, token_type: TokenType, literal: Option<Literal>) {
