@@ -3,6 +3,8 @@ use std::string::String;
 
 use crate::Lox;
 
+const RADIX: u32 = 10;
+
 #[derive(Debug)]
 enum TokenType {
     // Single-character tokens.
@@ -174,6 +176,7 @@ impl Scanner<'_> {
             '"' => self.string(),
             ' ' | '\r' | '\t' => {}
             '\n' => self.line += 1,
+            _ if c.is_digit(RADIX) => self.number(),
             _ => self.lox.error(self.line, "Unexpected character."),
         }
     }
@@ -209,11 +212,15 @@ impl Scanner<'_> {
         if self.is_at_end() {
             '\0'
         } else {
-            let c = self.source.chars().nth(self.current);
-            match c {
-                Some(c) => c,
-                None => panic!("Scanner failed at line {}", self.line),
-            }
+            self.source.chars().nth(self.current).unwrap()
+        }
+    }
+
+    fn peek_next(&self) -> char {
+        if self.current + 1 >= self.source.len() {
+            '\0'
+        } else {
+            self.source.chars().nth(self.current + 1).unwrap()
         }
     }
 
@@ -238,6 +245,29 @@ impl Scanner<'_> {
             .take(self.current - 1 - (self.start + 1))
             .collect();
         self.add_token(TokenType::String, Some(Literal::Str(value)));
+    }
+
+    fn number(&mut self) {
+        while self.peek().is_digit(RADIX) {
+            self.advance();
+        }
+        if self.peek() == '.' && self.peek_next().is_digit(RADIX) {
+            self.advance();
+
+            while self.peek().is_digit(RADIX) {
+                self.advance();
+            }
+        }
+        let value: String = self
+            .source
+            .chars()
+            .skip(self.start)
+            .take(self.current - self.start)
+            .collect();
+        self.add_token(
+            TokenType::Number,
+            Some(Literal::F64(value.as_str().parse::<f64>().unwrap())),
+        )
     }
 
     fn add_token(&mut self, token_type: TokenType, literal: Option<Literal>) {
