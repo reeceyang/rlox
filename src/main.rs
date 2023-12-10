@@ -1,10 +1,11 @@
-use std::fs;
 use std::env;
+use std::fs;
 use std::io;
 use std::io::Write;
 
 use scanner::Scanner;
 
+mod ast;
 mod scanner;
 
 pub struct Lox {
@@ -32,7 +33,7 @@ impl Lox {
     fn run_file(&mut self, file_path: &String) {
         match fs::read_to_string(file_path) {
             Ok(source) => self.run(&source),
-            Err(error) => println!("error: {error}")
+            Err(error) => println!("error: {error}"),
         }
     }
 
@@ -55,7 +56,7 @@ impl Lox {
 }
 
 fn main() {
-    let mut lox = Lox {had_error: false };
+    let mut lox = Lox { had_error: false };
     let args: Vec<String> = env::args().collect();
     if args.len() <= 1 {
         lox.run_prompt();

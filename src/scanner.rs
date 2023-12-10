@@ -57,7 +57,7 @@ enum TokenType {
 }
 
 #[derive(Debug)]
-enum Literal {
+pub enum Object {
     Str(String),
     F64(f64),
 }
@@ -65,7 +65,7 @@ enum Literal {
 pub struct Token {
     token_type: TokenType,
     lexeme: String,
-    literal: Option<Literal>,
+    literal: Option<Object>,
     line: i32,
 }
 
@@ -264,7 +264,7 @@ impl Scanner<'_> {
             .skip(self.start + 1)
             .take(self.current - 1 - (self.start + 1))
             .collect();
-        self.add_token(TokenType::String, Some(Literal::Str(value)));
+        self.add_token(TokenType::String, Some(Object::Str(value)));
     }
 
     fn number(&mut self) {
@@ -286,7 +286,7 @@ impl Scanner<'_> {
             .collect();
         self.add_token(
             TokenType::Number,
-            Some(Literal::F64(value.as_str().parse::<f64>().unwrap())),
+            Some(Object::F64(value.as_str().parse::<f64>().unwrap())),
         )
     }
 
@@ -311,7 +311,7 @@ impl Scanner<'_> {
         self.add_token(token_type, None)
     }
 
-    fn add_token(&mut self, token_type: TokenType, literal: Option<Literal>) {
+    fn add_token(&mut self, token_type: TokenType, literal: Option<Object>) {
         let text: String = self
             .source
             .chars()
