@@ -2,24 +2,33 @@ use std::env;
 use std::fs;
 use std::io;
 use std::io::Write;
+use std::process::exit;
 
+use interpreter::interpret;
+use interpreter::RuntimeError;
 use parser::Parser;
 use scanner::Scanner;
 use scanner::Token;
 use scanner::TokenType;
 
-use crate::ast_printer::print_ast;
-
 mod ast;
-mod ast_printer;
+mod interpreter;
 mod parser;
 mod scanner;
 
 pub struct Lox {
     had_error: bool,
+    had_runtime_error: bool,
 }
 
 impl Lox {
+    fn new() -> Lox {
+        Lox {
+            had_error: false,
+            had_runtime_error: false,
+        }
+    }
+
     fn run_prompt(&mut self) {
         loop {
             print!("> ");
@@ -39,8 +48,16 @@ impl Lox {
 
     fn run_file(&mut self, file_path: &String) {
         match fs::read_to_string(file_path) {
-            Ok(source) => self.run(&source),
-            Err(error) => println!("error: {error}"),
+            Ok(source) => {
+                self.run(&source);
+                if self.had_error {
+                    exit(65)
+                }
+                if self.had_runtime_error {
+                    exit(70)
+                }
+            }
+            Err(error) => eprintln!("error: {error}"),
         }
     }
 
@@ -49,11 +66,11 @@ impl Lox {
         let tokens = scanner.scan_tokens().to_owned();
         let mut parser = Parser::new(&tokens, self);
         let expr = parser.parse();
-        if self.had_error {
-            return;
-        }
 
-        println!("{}", print_ast(&expr.unwrap()))
+        match expr {
+            Some(expr) => interpret(expr, self),
+            None => todo!(),
+        }
     }
 
     fn error(&mut self, token: Token, message: String) {
@@ -64,6 +81,11 @@ impl Lox {
         }
     }
 
+    fn runtime_error(&mut self, error: RuntimeError) {
+        eprintln!("{}\n[line {}]", error.message, error.token.line);
+        self.had_runtime_error = true;
+    }
+
     fn report(&mut self, line: i32, message: String) {
         eprintln!("[line {line}] Error: {message}");
         self.had_error = true;
@@ -71,7 +93,7 @@ impl Lox {
 }
 
 fn main() {
-    let mut lox = Lox { had_error: false };
+    let mut lox = Lox::new();
     let args: Vec<String> = env::args().collect();
     if args.len() <= 1 {
         lox.run_prompt();
