@@ -3,9 +3,16 @@ use std::fs;
 use std::io;
 use std::io::Write;
 
+use parser::Parser;
 use scanner::Scanner;
+use scanner::Token;
+use scanner::TokenType;
+
+use crate::ast_printer::print_ast;
 
 mod ast;
+mod ast_printer;
+mod parser;
 mod scanner;
 
 pub struct Lox {
@@ -39,17 +46,25 @@ impl Lox {
 
     fn run(&mut self, source: &String) {
         let mut scanner = Scanner::new(source, self);
-        let tokens = scanner.scan_tokens();
-        for token in tokens {
-            println!("{token}");
+        let tokens = scanner.scan_tokens().to_owned();
+        let mut parser = Parser::new(&tokens, self);
+        let expr = parser.parse();
+        if self.had_error {
+            return;
+        }
+
+        println!("{}", print_ast(&expr.unwrap()))
+    }
+
+    fn error(&mut self, token: Token, message: String) {
+        if token.token_type == TokenType::Eof {
+            self.report(token.line, format!("at end {message}"));
+        } else {
+            self.report(token.line, format!("at '{}' {}", token.lexeme, message));
         }
     }
 
-    fn error(&mut self, line: i32, message: &str) {
-        self.report(line, message);
-    }
-
-    fn report(&mut self, line: i32, message: &str) {
+    fn report(&mut self, line: i32, message: String) {
         eprintln!("[line {line}] Error: {message}");
         self.had_error = true;
     }

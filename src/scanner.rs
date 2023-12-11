@@ -5,8 +5,8 @@ use phf::phf_map;
 
 use crate::Lox;
 
-#[derive(Debug, Clone, Copy)]
-enum TokenType {
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum TokenType {
     // Single-character tokens.
     LeftParen,
     RightParen,
@@ -56,17 +56,20 @@ enum TokenType {
     Eof,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum Object {
     Str(String),
     F64(f64),
+    Bool(bool),
+    Nil,
 }
 
+#[derive(Clone)]
 pub struct Token {
-    token_type: TokenType,
-    lexeme: String,
-    literal: Option<Object>,
-    line: i32,
+    pub token_type: TokenType,
+    pub lexeme: String,
+    pub literal: Option<Object>,
+    pub line: i32,
 }
 
 impl fmt::Display for Token {
@@ -197,7 +200,9 @@ impl Scanner<'_> {
             '\n' => self.line += 1,
             _ if c.is_ascii_digit() => self.number(),
             _ if c.is_ascii_alphabetic() => self.identifier(),
-            _ => self.lox.error(self.line, "Unexpected character."),
+            _ => self
+                .lox
+                .report(self.line, "Unexpected character.".to_owned()),
         }
     }
 
@@ -253,7 +258,8 @@ impl Scanner<'_> {
         }
 
         if self.is_at_end() {
-            self.lox.error(self.line, "Unterminated string.");
+            self.lox
+                .report(self.line, "Unterminated string.".to_owned());
             return;
         }
 
