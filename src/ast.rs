@@ -26,6 +26,19 @@ pub enum Expr {
     Unary(Unary),
 }
 
+pub struct Expression {
+    pub expression: Expr,
+}
+
+pub struct Print {
+    pub expression: Expr,
+}
+
+pub enum Stmt {
+    Expression(Expression),
+    Print(Print),
+}
+
 // pub trait Visitor {
 //     fn visit_binary(&mut self, expr: &Binary);
 //     fn visit_grouping(&mut self, expr: &Grouping);

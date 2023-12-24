@@ -1,5 +1,5 @@
 use crate::{
-    ast::Expr,
+    ast::{Expr, Stmt},
     scanner::{Object, Token, TokenType},
     Lox,
 };
@@ -106,10 +106,29 @@ fn evaluate(expr: Expr) -> Result<Object, RuntimeError> {
     }
 }
 
-pub fn interpret(expr: Expr, lox: &mut Lox) {
-    match evaluate(expr) {
-        Ok(value) => println!("{}", stringify(value)),
-        Err(e) => lox.runtime_error(e),
+fn execute(stmt: Stmt) -> Result<(), RuntimeError> {
+    match stmt {
+        Stmt::Expression(s) => {
+            evaluate(s.expression)?;
+            ()
+        }
+        Stmt::Print(s) => {
+            let value = evaluate(s.expression)?;
+            println!("{}", stringify(value))
+        }
+    };
+    Ok(())
+}
+
+pub fn interpret(statements: Vec<Stmt>, lox: &mut Lox) {
+    for stmt in statements {
+        match execute(stmt) {
+            Ok(_) => (),
+            Err(error) => {
+                lox.runtime_error(error);
+                return;
+            }
+        }
     }
 }
 

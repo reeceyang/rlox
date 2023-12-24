@@ -65,11 +65,11 @@ impl Lox {
         let mut scanner = Scanner::new(source, self);
         let tokens = scanner.scan_tokens().to_owned();
         let mut parser = Parser::new(&tokens, self);
-        let expr = parser.parse();
+        let statements = parser.parse();
 
-        match expr {
-            Some(expr) => interpret(expr, self),
-            None => todo!(),
+        match statements {
+            Ok(stmts) => interpret(stmts, self),
+            Err(_) => (),
         }
     }
 
